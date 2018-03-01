@@ -14,7 +14,7 @@ SubDir TOP external sp ;
 	local filename ;
 	for filename in $(HEADERS) 
     {
-		CopyFile external-sp : $(SUBDIR)/.include/sp/$(filename:B:S=h) : $(filename) ;
+		CopyFile external-sp : $(SUBDIR)/.include/sp/$(filename:B:S=.h) : $(filename) ;
 	}
 
     C.IncludeDirectories * : .include ;

@@ -80,6 +80,11 @@ namespace sp {
     template <size_t N, class... Args>
     int32_t format(char (&buffer)[N], const StringView& fmt, Args&&... args);
 
+    /// Print to the provided writer using the provided format with the
+    /// provided format arguments. Returns writer instance.
+    template <typename W, typename... Args>
+    W& fmt(W& writer, const StringView& fmt, Args&&... args);
+
     /// Provided format functions.
     bool format_value(IWriter& writer, const StringView& fmt, std::nullptr_t);
     bool format_value(IWriter& writer, const StringView& fmt, bool value);
@@ -107,6 +112,9 @@ namespace sp {
     bool format_value(IWriter& output, const StringView& fmt, T* value);
 
 } // namespace sp
+
+// helper macro
+#define SP_CFMT(format, ...) (sp::fmt(sp::CTempWriter<>(),format,__VA_ARGS__).c_str())
 
 ///
 // Implementation
@@ -148,6 +156,44 @@ namespace sp {
     private:
         char* m_buffer;
         int32_t m_size;
+        int32_t m_length;
+    };
+
+    template<size_t N=256>
+    class CTempWriter : public IWriter {
+    public:
+        CTempWriter()
+            : m_length(0)
+        {
+            m_buffer[0]=0;
+        }
+
+        const char* c_str() const
+        {
+            return m_buffer;
+        }
+
+        int32_t result() const
+        {
+            return m_length;
+        }
+
+        size_t write(size_t length, const void* data) override
+        {
+            if (m_length >= N) {
+                m_length += int32_t(length);
+                return 0;
+            }
+
+            const auto toCopy = std::min(N-size_t(m_length), length);
+            std::memcpy(m_buffer+m_length, data, toCopy);
+            m_buffer[m_length+toCopy]=0;
+            m_length += int32_t(length);
+            return toCopy;
+        }
+
+    private:
+        char m_buffer[N+1];
         int32_t m_length;
     };
 
@@ -883,6 +929,14 @@ namespace sp {
         StringWriter writer(buffer, N);
         format(writer, fmt, std::forward<Args>(args)...);
         return writer.result();
+    }
+
+    template <typename W, typename... Args>
+    W& fmt(W& writer, const StringView& fmt, Args&&... args)
+    {
+        int32_t prevIndex = -1;
+        do_format(writer, fmt, &prevIndex, std::forward<Args>(args)...);
+        return writer;
     }
 
     inline bool format_value(IWriter& writer, const StringView& fmt, std::nullptr_t)
