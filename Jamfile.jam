@@ -1,0 +1,22 @@
+# sp
+
+SubDir TOP external sp ;
+
+{
+    local HEADERS SOURCES ;
+
+    HEADERS += sp.hpp ;
+    HEADERS = $(SUBDIR)/include/$(HEADERS) ;
+        
+    SOURCES += $(SUBDIR)/empty.cpp ;
+
+    # have to change header extension to '.h'
+	local filename ;
+	for filename in $(HEADERS) 
+    {
+		CopyFile external-sp : $(SUBDIR)/.include/sp/$(filename:B:S=h) : $(filename) ;
+	}
+
+    C.IncludeDirectories * : .include ;
+    C.Library external-sp : $(SOURCES) ;
+}
