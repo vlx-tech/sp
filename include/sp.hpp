@@ -161,12 +161,73 @@ namespace sp {
         int32_t m_length;
     };
 
+    class AutoStringWriter: public IWriter {
+    public:
+        AutoStringWriter() {}
+        ~AutoStringWriter()
+        {
+            delete[] m_buffer;
+        }
+
+        void clear()
+        {
+            m_used=0;
+            if (m_buffer)
+                m_buffer[0]=0;
+        }
+
+        const char* c_str() const
+        {
+            return m_buffer?m_buffer:"";
+        }
+
+        size_t write(size_t length, const void* data) override
+        {
+            if (m_used+length>m_alloc)
+            {
+                if (m_buffer==nullptr)
+                {
+                    m_alloc=length*2;
+                    if (m_alloc<255)
+                        m_alloc=255;
+                    m_buffer=new char[m_alloc+1];
+                }
+                else
+                {
+                    m_alloc*=2;
+                    if (m_alloc<m_used+length)
+                        m_alloc=m_used+length;
+                    auto n=new char[m_alloc+1];
+                    memcpy(n,m_buffer,m_used);
+                    delete[] m_buffer;
+                    m_buffer=n;
+                }
+            }
+
+            memcpy(m_buffer+m_used,data,length);
+            m_used+=length;
+            m_buffer[m_used]=0;
+            return length;
+        }
+
+    private:
+        char *m_buffer { nullptr };
+        size_t m_alloc { 0 };
+        size_t m_used { 0 };
+    };
+
     template<size_t N=256>
     class CTempWriter : public IWriter {
     public:
         CTempWriter()
             : m_length(0)
         {
+            m_buffer[0]=0;
+        }
+
+        void clear()
+        {
+            m_length=0;
             m_buffer[0]=0;
         }
 
